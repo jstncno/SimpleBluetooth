@@ -200,8 +200,6 @@ public class MainActivity extends AppCompatActivity {
                                 mBluetoothAdapter.cancelDiscovery();
                                 Log.i("mBluetoothHeadset", String.format("mBluetoothHeadset connectState: %s", mBluetoothHeadset.getConnectionState(selectedDevice)));
                                 Log.i(TAG, String.format("Connecting to device %s %s", deviceAddress, deviceName));
-//                                if (bluetoothService.hasOpenConnection())
-//                                    bluetoothService.closeConnection();
                                 bluetoothService.connect(selectedDevice);
                                 return true;
                             case R.id.menu_forget:

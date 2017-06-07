@@ -28,7 +28,7 @@ interface BluetoothService {
 
 public class SimpleBluetoothService implements BluetoothService {
     private final String TAG = "SimpleBluetoothService";
-    private final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private final UUID SPP_UUID = UUID.fromString("00001108-0000-1000-8000-00805F9B34FB");
 
     private final BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
@@ -100,6 +100,8 @@ public class SimpleBluetoothService implements BluetoothService {
     public void connect(BluetoothDevice device) {
         if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
+        if (mBluetoothConnectThread != null)
+            mBluetoothConnectThread.cancel();
         mBluetoothConnectThread = new SimpleBluetoothConnectionThread(
                 mBluetoothAdapter,
                 device,
@@ -119,6 +121,6 @@ public class SimpleBluetoothService implements BluetoothService {
 
     public boolean hasOpenConnection() { return mBluetoothConnectThread.isRunning(); }
 
-    public void closeConnection() { mBluetoothConnectThread.cancel(); }
+    public void closeConnection() { if (mBluetoothConnectThread != null) mBluetoothConnectThread.cancel(); }
 
 }
