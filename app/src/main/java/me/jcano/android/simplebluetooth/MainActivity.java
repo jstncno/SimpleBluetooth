@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private ListView mListView;
     private ArrayList<String> devices = new ArrayList<>();
-    private ArrayAdapter<String> devicesAdapter;
+    private ArrayAdapter<String> devicesArrayAdapter;
 
     private SimpleBluetoothService bluetoothService;
 
@@ -46,13 +46,13 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_paired_devices:
                     Log.i("NavigationItemListener", "paired_devices");
                     bluetoothService.cancelDiscovery();
-                    devicesAdapter.clear();
-                    devicesAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
+                    devicesArrayAdapter.clear();
+                    devicesArrayAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
                     Log.i(TAG, String.format("pairedDevices: %s", devices));
                     return true;
                 case R.id.navigation_discover:
                     bluetoothService.cancelDiscovery();
-                    devicesAdapter.clear();
+                    devicesArrayAdapter.clear();
                     bluetoothService.discover();
                     Log.i("NavigationItemListener", "discover");
                     return true;
@@ -69,19 +69,20 @@ public class MainActivity extends AppCompatActivity {
 
         mListView = (ListView) findViewById(R.id.list);
         // Create adapter for ListView
-        devicesAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, devices);
-        mListView.setAdapter(devicesAdapter);
+        devicesArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, devices);
+        mListView.setAdapter(devicesArrayAdapter);
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
 
          bluetoothService = new SimpleBluetoothService(
                 mBluetoothAdapter,
-                devicesAdapter
+                 devicesArrayAdapter
         );
 
         // Set up Bluetooth
         if (mBluetoothAdapter == null) {
+            // TODO
             // Device does not support Bluetooth
             Log.e(TAG, "Device does not support Bluetooth.");
         }
@@ -104,9 +105,9 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
         registerReceiver(bluetoothService.getReceiver(), filter);
 
-        // Show paired devices initially
-        devicesAdapter.clear();
-        devicesAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
+        // Initially show paired devices
+        devicesArrayAdapter.clear();
+        devicesArrayAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
     }
 
     @Override
@@ -123,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void addPairedDevice(String deviceName) {
         Log.i(TAG, String.format("Adding %s to pairedDevices", deviceName));
-        devicesAdapter.add(deviceName);
+        devicesArrayAdapter.add(deviceName);
     }
 
 }

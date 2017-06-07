@@ -30,7 +30,7 @@ public class SimpleBluetoothService implements BluetoothService {
     private final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private final BluetoothAdapter mBluetoothAdapter;
-    private ArrayAdapter<String> mDevicesAdapter;
+    private ArrayAdapter<String> mDevicesArrayAdapter;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -48,9 +48,9 @@ public class SimpleBluetoothService implements BluetoothService {
                 String deviceHardwareAddress = device.getAddress(); // MAC address
                 Log.i(TAG, String.format("Discovered device %s with address %s", deviceName, deviceHardwareAddress));
                 if (deviceName == null)
-                    mDevicesAdapter.add(String.format("%s %s", deviceHardwareAddress, "unknown"));
+                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, "unknown"));
                 else
-                    mDevicesAdapter.add(String.format("%s %s", deviceHardwareAddress, deviceName));
+                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, deviceName));
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 Log.i(TAG, "Bluetooth discovery finished");
             }
@@ -59,9 +59,9 @@ public class SimpleBluetoothService implements BluetoothService {
 
     public SimpleBluetoothService(
             BluetoothAdapter adapter,
-            ArrayAdapter<String> devicesAdapter) {
+            ArrayAdapter<String> devicesArrayAdapter) {
         mBluetoothAdapter = adapter;
-        mDevicesAdapter = devicesAdapter;
+        mDevicesArrayAdapter = devicesArrayAdapter;
     }
 
     /**
