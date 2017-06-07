@@ -4,4 +4,6 @@
         android:title="Connect" />
     <item android:id="@+id/menu_forget"
         android:title="Forget" />
+    <item android:id="@+id/menu_disconnect"
+        android:title="Disconnect" />
 </menu>

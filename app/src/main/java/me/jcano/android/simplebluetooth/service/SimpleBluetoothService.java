@@ -33,6 +33,7 @@ public class SimpleBluetoothService implements BluetoothService {
     private final BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
     private SimpleBluetoothConnectionThread mBluetoothConnectThread;
+    private BluetoothDevice connectedDevice;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -110,6 +111,7 @@ public class SimpleBluetoothService implements BluetoothService {
         Log.i(TAG, device.getName());
         Log.i(TAG, device.getAddress());
         mBluetoothConnectThread.run();
+        connectedDevice = device;
     }
 
     public BroadcastReceiver getReceiver() { return mReceiver; }
@@ -117,10 +119,17 @@ public class SimpleBluetoothService implements BluetoothService {
     public void stopAllServices() {
         mBluetoothAdapter.cancelDiscovery();
         mBluetoothConnectThread.cancel();
+        connectedDevice = null;
     }
 
-    public boolean hasOpenConnection() { return mBluetoothConnectThread.isRunning(); }
+    public boolean isConnected() { return mBluetoothConnectThread.isRunning(); }
 
-    public void closeConnection() { if (mBluetoothConnectThread != null) mBluetoothConnectThread.cancel(); }
+    public void disconnect() {
+        if (mBluetoothConnectThread != null)
+            mBluetoothConnectThread.cancel();
+        connectedDevice = null;
+    }
+
+    public BluetoothDevice getConnectedDevice() { return connectedDevice; }
 
 }

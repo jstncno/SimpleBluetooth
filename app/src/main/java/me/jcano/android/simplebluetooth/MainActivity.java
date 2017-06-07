@@ -21,6 +21,7 @@ import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -198,13 +199,16 @@ public class MainActivity extends AppCompatActivity {
                             case R.id.menu_connect:
                                 Log.i(TAG, "\"Connect\" menu button selected");
                                 mBluetoothAdapter.cancelDiscovery();
-                                Log.i("mBluetoothHeadset", String.format("mBluetoothHeadset connectState: %s", mBluetoothHeadset.getConnectionState(selectedDevice)));
                                 Log.i(TAG, String.format("Connecting to device %s %s", deviceAddress, deviceName));
                                 bluetoothService.connect(selectedDevice);
                                 return true;
                             case R.id.menu_forget:
                                 Log.i(TAG, "\"Forget\" menu button selected");
                                 // TODO
+                                return true;
+                            case R.id.menu_disconnect:
+                                Log.i(TAG, "\"Disconnect\" menu button selected");
+                                bluetoothService.disconnect();
                                 return true;
                             case R.id.menu_pair:
                                 Log.i(TAG, "\"Pair\" menu button selected");
@@ -228,8 +232,28 @@ public class MainActivity extends AppCompatActivity {
                     default:
                         popup.inflate(R.menu.bluetooth_paired_device_menu);
                 }
+                setMenuButtons(popup.getMenu(), selectedDevice);
                 popup.show();
             }
         });
+    }
+
+    private boolean setMenuButtons(Menu menu, BluetoothDevice device) {
+        MenuItem connect = menu.findItem(R.id.menu_connect);
+        MenuItem disconnect = menu.findItem(R.id.menu_disconnect);
+
+        if (connect != null && disconnect != null) {
+            BluetoothDevice connectedDevice = bluetoothService.getConnectedDevice();
+            if (connectedDevice != null && device.getAddress() == connectedDevice.getAddress()) {
+                Log.i(TAG, "Connect button disabled");
+                disconnect.setEnabled(true);
+                connect.setEnabled(false);
+            } else {
+                Log.i(TAG, "Disconnect button disabled");
+                connect.setEnabled(true);
+                disconnect.setEnabled(false);
+            }
+        }
+        return true;
     }
 }
