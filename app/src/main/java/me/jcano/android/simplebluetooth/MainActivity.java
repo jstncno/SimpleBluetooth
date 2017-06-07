@@ -1,10 +1,12 @@
 package me.jcano.android.simplebluetooth;
 
 import me.jcano.android.simplebluetooth.service.SimpleBluetoothService;
+import me.jcano.android.simplebluetooth.service.threads.SimpleBluetoothConnectionThread;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
@@ -12,12 +14,14 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -43,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView mListView;
     private ArrayList<BluetoothDevice> mDevices = new ArrayList<>();
     private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
+    private BluetoothHeadset mBluetoothHeadset;
     private SimpleBluetoothService bluetoothService;
 
     public enum Page { PAIRED_DEVICES, DISCOVERED_DEVICES }
@@ -74,6 +79,20 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
+    private BluetoothProfile.ServiceListener mProfileListener = new BluetoothProfile.ServiceListener() {
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            if (profile == BluetoothProfile.HEADSET) {
+                mBluetoothHeadset = (BluetoothHeadset) proxy;
+                Log.i("mProfileListener", "mBluetoothHeadset set!");
+            }
+        }
+        public void onServiceDisconnected(int profile) {
+            if (profile == BluetoothProfile.HEADSET) {
+                mBluetoothHeadset = null;
+            }
+        }
+    };
+
     private class SimpleBluetoothArrayAdapter extends ArrayAdapter<BluetoothDevice> {
         public SimpleBluetoothArrayAdapter(Context context, ArrayList<BluetoothDevice> devices) {
             super(context, 0, devices);
@@ -82,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             // Get the data item for this position
-            BluetoothDevice device = getItem(position);
+            final BluetoothDevice device = getItem(position);
             // Check if an existing view is being reused, otherwise inflate the view
             if (convertView == null) {
                 convertView = LayoutInflater.from(getContext()).inflate(R.layout.bluetooth_device, parent, false);
@@ -100,43 +119,6 @@ public class MainActivity extends AppCompatActivity {
             nameTextView.setText(deviceName);
             addressTextView.setText(deviceAddress);
 
-            // Show menu when tapped
-            ListView blueoothListView = mListView;
-            blueoothListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    PopupMenu popup = new PopupMenu(view.getContext(), view);
-                    popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                        @Override
-                        public boolean onMenuItemClick(MenuItem item) {
-                            switch (item.getItemId()) {
-                                case R.id.menu_connect:
-                                    Log.i(TAG, "\"Connect\" menu button selected");
-                                    return true;
-                                case R.id.menu_forget:
-                                    Log.i(TAG, "\"Forget\" menu button selected");
-                                    return true;
-                                case R.id.menu_pair:
-                                    Log.i(TAG, "\"Pair\" menu button selected");
-                                    return true;
-                                default:
-                                    return false;
-                            }
-                        }
-                    });
-                    switch (currentPage) {
-                        case DISCOVERED_DEVICES:
-                            popup.inflate(R.menu.bluetooth_discovered_device_menu);
-                            break;
-                        case PAIRED_DEVICES:
-                            popup.inflate(R.menu.bluetooth_paired_device_menu);
-                            break;
-                        default:
-                            popup.inflate(R.menu.bluetooth_paired_device_menu);
-                    }
-                    popup.show();
-                }
-            });
-
             // Return the completed view to render on screen
             return convertView;
         }
@@ -150,12 +132,11 @@ public class MainActivity extends AppCompatActivity {
         mListView = (ListView) findViewById(R.id.list_view);
         // Create adapter for ListView
         mDevicesArrayAdapter = new SimpleBluetoothArrayAdapter(this, mDevices);
+        addListenersToListView();
         mListView.setAdapter(mDevicesArrayAdapter);
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-
-         bluetoothService = new SimpleBluetoothService(mBluetoothAdapter, mDevicesArrayAdapter);
 
         // Set up Bluetooth
         if (mBluetoothAdapter == null) {
@@ -168,10 +149,12 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
+        bluetoothService = new SimpleBluetoothService(mBluetoothAdapter, mDevicesArrayAdapter);
 
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                 MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+        mBluetoothAdapter.getProfileProxy(this, mProfileListener, BluetoothProfile.HEADSET);
 
         // Register for broadcasts when a device is discovered.
         IntentFilter filter = new IntentFilter();
@@ -193,15 +176,84 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         mBluetoothAdapter.cancelDiscovery();
-//        mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
+        mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
+        bluetoothService.stopAllServices();
 
         // Don't forget to unregister the ACTION_FOUND receiver.
         unregisterReceiver(bluetoothService.getReceiver());
     }
 
+    private void addListenersToListView() {
+        // Show menu when tapped
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                PopupMenu popup = new PopupMenu(view.getContext(), view);
+                final BluetoothDevice selectedDevice = mDevicesArrayAdapter.getItem(position);
+                popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                    String deviceName = selectedDevice.getName();
+                    String deviceAddress = selectedDevice.getAddress();
 
-    private void addPairedDevice(BluetoothDevice device) {
-        Log.i(TAG, String.format("Adding device %s to pairedDevices", device.getAddress()));
-        mDevicesArrayAdapter.add(device);
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        switch (item.getItemId()) {
+                            case R.id.menu_connect:
+                                Log.i(TAG, "\"Connect\" menu button selected");
+                                mBluetoothAdapter.cancelDiscovery();
+                                Log.i(TAG, String.format("Connecting to device %s %s", deviceAddress, deviceName));
+                                bluetoothService.connect(selectedDevice);
+                                return true;
+                            case R.id.menu_forget:
+                                Log.i(TAG, "\"Forget\" menu button selected");
+                                // TODO
+                                return true;
+                            case R.id.menu_disconnect:
+                                Log.i(TAG, "\"Disconnect\" menu button selected");
+                                bluetoothService.disconnect();
+                                return true;
+                            case R.id.menu_pair:
+                                Log.i(TAG, "\"Pair\" menu button selected");
+                                mBluetoothAdapter.cancelDiscovery();
+                                BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceAddress);
+                                Log.i(TAG, String.format("Pairing with device %s %s", deviceAddress, deviceName));
+                                bluetoothService.pairDevice(device);
+                                return true;
+                            default:
+                                return false;
+                        }
+                    }
+                });
+                switch (currentPage) {
+                    case DISCOVERED_DEVICES:
+                        popup.inflate(R.menu.bluetooth_discovered_device_menu);
+                        break;
+                    case PAIRED_DEVICES:
+                        popup.inflate(R.menu.bluetooth_paired_device_menu);
+                        break;
+                    default:
+                        popup.inflate(R.menu.bluetooth_paired_device_menu);
+                }
+                setMenuButtons(popup.getMenu(), selectedDevice);
+                popup.show();
+            }
+        });
+    }
+
+    private boolean setMenuButtons(Menu menu, BluetoothDevice device) {
+        MenuItem connect = menu.findItem(R.id.menu_connect);
+        MenuItem disconnect = menu.findItem(R.id.menu_disconnect);
+
+        if (connect != null && disconnect != null) {
+            BluetoothDevice connectedDevice = bluetoothService.getConnectedDevice();
+            if (connectedDevice != null && device.getAddress() == connectedDevice.getAddress()) {
+                Log.i(TAG, "Connect button disabled");
+                disconnect.setEnabled(true);
+                connect.setEnabled(false);
+            } else {
+                Log.i(TAG, "Disconnect button disabled");
+                connect.setEnabled(true);
+                disconnect.setEnabled(false);
+            }
+        }
+        return true;
     }
 }

@@ -12,6 +12,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import me.jcano.android.simplebluetooth.service.threads.SimpleBluetoothConnectionThread;
+
 /**
  * Created by justincano on 6/6/17.
  */
@@ -21,16 +23,17 @@ interface BluetoothService {
     boolean cancelDiscovery();
     Set<BluetoothDevice> getPairedDevices();
     boolean pairDevice(BluetoothDevice device);
-    // TODO
-    // void connect(BluetoothDevice device);
+    void connect(BluetoothDevice device);
 }
 
 public class SimpleBluetoothService implements BluetoothService {
     private final String TAG = "SimpleBluetoothService";
-    private final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private final UUID SPP_UUID = UUID.fromString("00001108-0000-1000-8000-00805F9B34FB");
 
     private final BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
+    private SimpleBluetoothConnectionThread mBluetoothConnectThread;
+    private BluetoothDevice connectedDevice;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -48,10 +51,6 @@ public class SimpleBluetoothService implements BluetoothService {
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
                 Log.i(TAG, String.format("Discovered device %s with address %s", deviceName, deviceHardwareAddress));
-//                if (deviceName == null)
-//                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, "unknown"));
-//                else
-//                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, deviceName));
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 Log.i(TAG, "Bluetooth discovery finished");
             }
@@ -69,9 +68,8 @@ public class SimpleBluetoothService implements BluetoothService {
      * @return true if discovery initialization is successful, false otherwise
      */
     public boolean discover() {
-        if (mBluetoothAdapter.isDiscovering()) {
+        if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
-        }
         return mBluetoothAdapter.startDiscovery();
     }
 
@@ -86,9 +84,8 @@ public class SimpleBluetoothService implements BluetoothService {
      * @return true if device pairing is successful
      */
     public boolean pairDevice(BluetoothDevice device) {
-        if (mBluetoothAdapter.isDiscovering()) {
+        if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
-        }
         return device.createBond();
     }
 
@@ -96,27 +93,43 @@ public class SimpleBluetoothService implements BluetoothService {
      * @return A set of paired devices
      */
     public Set<BluetoothDevice> getPairedDevices() {
-        if (mBluetoothAdapter.isDiscovering()) {
+        if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
-        }
         return mBluetoothAdapter.getBondedDevices();
     }
 
-    public Set<String> getNamesOfPairedDevices() {
-        Log.i(TAG, "Finding names of paired devices...");
-        Set<String> names = new HashSet<>();
-        if (mBluetoothAdapter.isDiscovering()) {
+    public void connect(BluetoothDevice device) {
+        if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
-        }
-        for (BluetoothDevice device : mBluetoothAdapter.getBondedDevices()) {
-            if (device.getName() == null)
-                names.add("unknown");
-            else
-                names.add(device.getName());
-        }
-        return names;
+        if (mBluetoothConnectThread != null)
+            mBluetoothConnectThread.cancel();
+        mBluetoothConnectThread = new SimpleBluetoothConnectionThread(
+                mBluetoothAdapter,
+                device,
+                SPP_UUID
+        );
+        Log.i(TAG, device.getName());
+        Log.i(TAG, device.getAddress());
+        mBluetoothConnectThread.run();
+        connectedDevice = device;
     }
 
     public BroadcastReceiver getReceiver() { return mReceiver; }
+
+    public void stopAllServices() {
+        mBluetoothAdapter.cancelDiscovery();
+        mBluetoothConnectThread.cancel();
+        connectedDevice = null;
+    }
+
+    public boolean isConnected() { return mBluetoothConnectThread.isRunning(); }
+
+    public void disconnect() {
+        if (mBluetoothConnectThread != null)
+            mBluetoothConnectThread.cancel();
+        connectedDevice = null;
+    }
+
+    public BluetoothDevice getConnectedDevice() { return connectedDevice; }
 
 }
