@@ -14,9 +14,11 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -97,8 +99,24 @@ public class MainActivity extends AppCompatActivity {
             ListView blueoothListView = mListView;
             blueoothListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    Toast.makeText(view.getContext(), String.format("Device %s %s", deviceName, deviceAddress), Toast.LENGTH_SHORT)
-                        .show();
+                    PopupMenu popup = new PopupMenu(view.getContext(), view);
+                    popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            switch (item.getItemId()) {
+                                case R.id.menu_connect:
+                                    Log.i(TAG, "\"Connect\" menu button selected");
+                                    return true;
+                                case R.id.menu_forget:
+                                    Log.i(TAG, "Forget\" menu button selected");
+                                    return true;
+                                default:
+                                    return false;
+                            }
+                        }
+                    });
+                    popup.inflate(R.menu.bluetooth_paired_device_menu);
+                    popup.show();
                 }
             });
 
