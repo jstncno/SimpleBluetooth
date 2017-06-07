@@ -30,7 +30,7 @@ public class SimpleBluetoothService implements BluetoothService {
     private final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private final BluetoothAdapter mBluetoothAdapter;
-    private ArrayAdapter<String> mDevicesArrayAdapter;
+    private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -44,13 +44,14 @@ public class SimpleBluetoothService implements BluetoothService {
                 // Discovery has found a device. Get the BluetoothDevice
                 // object and its info from the Intent.
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                mDevicesArrayAdapter.add(device);
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
                 Log.i(TAG, String.format("Discovered device %s with address %s", deviceName, deviceHardwareAddress));
-                if (deviceName == null)
-                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, "unknown"));
-                else
-                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, deviceName));
+//                if (deviceName == null)
+//                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, "unknown"));
+//                else
+//                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, deviceName));
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 Log.i(TAG, "Bluetooth discovery finished");
             }
@@ -59,7 +60,7 @@ public class SimpleBluetoothService implements BluetoothService {
 
     public SimpleBluetoothService(
             BluetoothAdapter adapter,
-            ArrayAdapter<String> devicesArrayAdapter) {
+            ArrayAdapter<BluetoothDevice> devicesArrayAdapter) {
         mBluetoothAdapter = adapter;
         mDevicesArrayAdapter = devicesArrayAdapter;
     }
@@ -74,10 +75,16 @@ public class SimpleBluetoothService implements BluetoothService {
         return mBluetoothAdapter.startDiscovery();
     }
 
+    /**
+     * @return true if discovery cancellation is successful, false otherwise
+     */
     public boolean cancelDiscovery() {
         return mBluetoothAdapter.cancelDiscovery();
     }
 
+    /**
+     * @return true if device pairing is successful
+     */
     public boolean pairDevice(BluetoothDevice device) {
         if (mBluetoothAdapter.isDiscovering()) {
             mBluetoothAdapter.cancelDiscovery();
@@ -85,6 +92,9 @@ public class SimpleBluetoothService implements BluetoothService {
         return device.createBond();
     }
 
+    /**
+     * @return A set of paired devices
+     */
     public Set<BluetoothDevice> getPairedDevices() {
         if (mBluetoothAdapter.isDiscovering()) {
             mBluetoothAdapter.cancelDiscovery();

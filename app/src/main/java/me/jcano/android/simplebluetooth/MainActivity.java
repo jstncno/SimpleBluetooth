@@ -14,13 +14,22 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Adapter;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,13 +41,14 @@ public class MainActivity extends AppCompatActivity {
     private final static String TAG = "SimpleBluetoothActivity";
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private ListView mListView;
-    private ArrayList<String> devices = new ArrayList<>();
-    private ArrayAdapter<String> devicesArrayAdapter;
-
+    private ArrayList<BluetoothDevice> mDevices = new ArrayList<>();
+    private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
     private SimpleBluetoothService bluetoothService;
 
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-            = new BottomNavigationView.OnNavigationItemSelectedListener() {
+    public enum Page { PAIRED_DEVICES, DISCOVERED_DEVICES }
+    private Page currentPage;
+
+    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -46,15 +56,17 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_paired_devices:
                     Log.i("NavigationItemListener", "paired_devices");
                     bluetoothService.cancelDiscovery();
-                    devicesArrayAdapter.clear();
-                    devicesArrayAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
-                    Log.i(TAG, String.format("pairedDevices: %s", devices));
+                    mDevicesArrayAdapter.clear();
+                    mDevicesArrayAdapter.addAll(bluetoothService.getPairedDevices());
+                    Log.i(TAG, String.format("pairedDevices: %s", mDevices));
+                    currentPage = Page.PAIRED_DEVICES;
                     return true;
                 case R.id.navigation_discover:
                     bluetoothService.cancelDiscovery();
-                    devicesArrayAdapter.clear();
+                    mDevicesArrayAdapter.clear();
                     bluetoothService.discover();
                     Log.i("NavigationItemListener", "discover");
+                    currentPage = Page.DISCOVERED_DEVICES;
                     return true;
             }
             return false;
@@ -62,23 +74,88 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
+    private class SimpleBluetoothArrayAdapter extends ArrayAdapter<BluetoothDevice> {
+        public SimpleBluetoothArrayAdapter(Context context, ArrayList<BluetoothDevice> devices) {
+            super(context, 0, devices);
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            // Get the data item for this position
+            BluetoothDevice device = getItem(position);
+            // Check if an existing view is being reused, otherwise inflate the view
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(R.layout.bluetooth_device, parent, false);
+            }
+            // Lookup view for data population
+            TextView nameTextView = (TextView) convertView.findViewById(R.id.device_name);
+            TextView addressTextView = (TextView) convertView.findViewById(R.id.device_address);
+            // Populate the data into the template view using the data object
+            final String deviceName;
+            final String deviceAddress= device.getAddress();
+            if (device.getName() == null)
+                deviceName = "(no friendly name for this device)";
+            else
+                deviceName = device.getName();
+            nameTextView.setText(deviceName);
+            addressTextView.setText(deviceAddress);
+
+            // Show menu when tapped
+            ListView blueoothListView = mListView;
+            blueoothListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    PopupMenu popup = new PopupMenu(view.getContext(), view);
+                    popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            switch (item.getItemId()) {
+                                case R.id.menu_connect:
+                                    Log.i(TAG, "\"Connect\" menu button selected");
+                                    return true;
+                                case R.id.menu_forget:
+                                    Log.i(TAG, "\"Forget\" menu button selected");
+                                    return true;
+                                case R.id.menu_pair:
+                                    Log.i(TAG, "\"Pair\" menu button selected");
+                                    return true;
+                                default:
+                                    return false;
+                            }
+                        }
+                    });
+                    switch (currentPage) {
+                        case DISCOVERED_DEVICES:
+                            popup.inflate(R.menu.bluetooth_discovered_device_menu);
+                            break;
+                        case PAIRED_DEVICES:
+                            popup.inflate(R.menu.bluetooth_paired_device_menu);
+                            break;
+                        default:
+                            popup.inflate(R.menu.bluetooth_paired_device_menu);
+                    }
+                    popup.show();
+                }
+            });
+
+            // Return the completed view to render on screen
+            return convertView;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mListView = (ListView) findViewById(R.id.list);
+        mListView = (ListView) findViewById(R.id.list_view);
         // Create adapter for ListView
-        devicesArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, devices);
-        mListView.setAdapter(devicesArrayAdapter);
+        mDevicesArrayAdapter = new SimpleBluetoothArrayAdapter(this, mDevices);
+        mListView.setAdapter(mDevicesArrayAdapter);
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
 
-         bluetoothService = new SimpleBluetoothService(
-                mBluetoothAdapter,
-                 devicesArrayAdapter
-        );
+         bluetoothService = new SimpleBluetoothService(mBluetoothAdapter, mDevicesArrayAdapter);
 
         // Set up Bluetooth
         if (mBluetoothAdapter == null) {
@@ -106,8 +183,9 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(bluetoothService.getReceiver(), filter);
 
         // Initially show paired devices
-        devicesArrayAdapter.clear();
-        devicesArrayAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
+        currentPage = Page.PAIRED_DEVICES;
+        mDevicesArrayAdapter.clear();
+        mDevicesArrayAdapter.addAll(bluetoothService.getPairedDevices());
     }
 
     @Override
@@ -122,9 +200,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void addPairedDevice(String deviceName) {
-        Log.i(TAG, String.format("Adding %s to pairedDevices", deviceName));
-        devicesArrayAdapter.add(deviceName);
+    private void addPairedDevice(BluetoothDevice device) {
+        Log.i(TAG, String.format("Adding device %s to pairedDevices", device.getAddress()));
+        mDevicesArrayAdapter.add(device);
     }
-
 }
