@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
                                     Log.i(TAG, "\"Connect\" menu button selected");
                                     return true;
                                 case R.id.menu_forget:
-                                    Log.i(TAG, "Forget\" menu button selected");
+                                    Log.i(TAG, "\"Forget\" menu button selected");
                                     return true;
                                 default:
                                     return false;
