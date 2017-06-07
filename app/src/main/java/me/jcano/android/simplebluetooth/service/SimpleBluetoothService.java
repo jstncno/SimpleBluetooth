@@ -74,10 +74,16 @@ public class SimpleBluetoothService implements BluetoothService {
         return mBluetoothAdapter.startDiscovery();
     }
 
+    /**
+     * @return true if discovery cancellation is successful, false otherwise
+     */
     public boolean cancelDiscovery() {
         return mBluetoothAdapter.cancelDiscovery();
     }
 
+    /**
+     * @return true if device pairing is successful
+     */
     public boolean pairDevice(BluetoothDevice device) {
         if (mBluetoothAdapter.isDiscovering()) {
             mBluetoothAdapter.cancelDiscovery();
@@ -85,6 +91,9 @@ public class SimpleBluetoothService implements BluetoothService {
         return device.createBond();
     }
 
+    /**
+     * @return A set of paired devices
+     */
     public Set<BluetoothDevice> getPairedDevices() {
         if (mBluetoothAdapter.isDiscovering()) {
             mBluetoothAdapter.cancelDiscovery();
