@@ -33,8 +33,8 @@ public class SimpleBluetoothService implements BluetoothService {
     private ArrayAdapter<String> mDevicesAdapter;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
-    public final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        private final String TAG = "BluetoothPair.mReceiver";
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        private final String TAG = "SBS/BroadcastReceiver";
 
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -106,5 +106,7 @@ public class SimpleBluetoothService implements BluetoothService {
         }
         return names;
     }
+
+    public BroadcastReceiver getReceiver() { return mReceiver; }
 
 }

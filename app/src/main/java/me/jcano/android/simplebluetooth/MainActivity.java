@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         filter.addAction(BluetoothDevice.ACTION_FOUND);
         filter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
-        registerReceiver(bluetoothService.mReceiver, filter);
+        registerReceiver(bluetoothService.getReceiver(), filter);
 
         // Show paired devices initially
         devicesAdapter.clear();
@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
 //        mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
 
         // Don't forget to unregister the ACTION_FOUND receiver.
-        unregisterReceiver(bluetoothService.mReceiver);
+        unregisterReceiver(bluetoothService.getReceiver());
     }
 
 
