@@ -45,6 +45,9 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
     private SimpleBluetoothService bluetoothService;
 
+    public enum Page { PAIRED_DEVICES, DISCOVERED_DEVICES }
+    private Page currentPage;
+
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
         @Override
@@ -56,12 +59,14 @@ public class MainActivity extends AppCompatActivity {
                     mDevicesArrayAdapter.clear();
                     mDevicesArrayAdapter.addAll(bluetoothService.getPairedDevices());
                     Log.i(TAG, String.format("pairedDevices: %s", mDevices));
+                    currentPage = Page.PAIRED_DEVICES;
                     return true;
                 case R.id.navigation_discover:
                     bluetoothService.cancelDiscovery();
                     mDevicesArrayAdapter.clear();
                     bluetoothService.discover();
                     Log.i("NavigationItemListener", "discover");
+                    currentPage = Page.DISCOVERED_DEVICES;
                     return true;
             }
             return false;
@@ -110,12 +115,24 @@ public class MainActivity extends AppCompatActivity {
                                 case R.id.menu_forget:
                                     Log.i(TAG, "\"Forget\" menu button selected");
                                     return true;
+                                case R.id.menu_pair:
+                                    Log.i(TAG, "\"Pair\" menu button selected");
+                                    return true;
                                 default:
                                     return false;
                             }
                         }
                     });
-                    popup.inflate(R.menu.bluetooth_paired_device_menu);
+                    switch (currentPage) {
+                        case DISCOVERED_DEVICES:
+                            popup.inflate(R.menu.bluetooth_discovered_device_menu);
+                            break;
+                        case PAIRED_DEVICES:
+                            popup.inflate(R.menu.bluetooth_paired_device_menu);
+                            break;
+                        default:
+                            popup.inflate(R.menu.bluetooth_paired_device_menu);
+                    }
                     popup.show();
                 }
             });
@@ -166,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(bluetoothService.getReceiver(), filter);
 
         // Initially show paired devices
+        currentPage = Page.PAIRED_DEVICES;
         mDevicesArrayAdapter.clear();
         mDevicesArrayAdapter.addAll(bluetoothService.getPairedDevices());
     }
