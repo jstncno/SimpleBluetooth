@@ -48,10 +48,6 @@ public class SimpleBluetoothService implements BluetoothService {
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
                 Log.i(TAG, String.format("Discovered device %s with address %s", deviceName, deviceHardwareAddress));
-//                if (deviceName == null)
-//                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, "unknown"));
-//                else
-//                    mDevicesArrayAdapter.add(String.format("%s %s", deviceHardwareAddress, deviceName));
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 Log.i(TAG, "Bluetooth discovery finished");
             }

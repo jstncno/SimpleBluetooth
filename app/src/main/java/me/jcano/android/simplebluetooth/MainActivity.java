@@ -5,6 +5,7 @@ import me.jcano.android.simplebluetooth.service.SimpleBluetoothService;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
@@ -12,6 +13,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<BluetoothDevice> mDevices = new ArrayList<>();
     private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
     private SimpleBluetoothService bluetoothService;
+    private BluetoothHeadset mBluetoothHeadset;
 
     public enum Page { PAIRED_DEVICES, DISCOVERED_DEVICES }
     private Page currentPage;
@@ -72,6 +75,20 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
+    };
+
+    private BluetoothProfile.ServiceListener mProfileListener = new BluetoothProfile.ServiceListener() {
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            if (profile == BluetoothProfile.HEADSET) {
+                mBluetoothHeadset = (BluetoothHeadset) proxy;
+                Log.i("mProfileListener", "mBluetoothHeadset set!");
+            }
+        }
+        public void onServiceDisconnected(int profile) {
+            if (profile == BluetoothProfile.HEADSET) {
+                mBluetoothHeadset = null;
+            }
+        }
     };
 
     private class SimpleBluetoothArrayAdapter extends ArrayAdapter<BluetoothDevice> {
@@ -117,6 +134,10 @@ public class MainActivity extends AppCompatActivity {
                                     return true;
                                 case R.id.menu_pair:
                                     Log.i(TAG, "\"Pair\" menu button selected");
+                                    mBluetoothAdapter.cancelDiscovery();
+                                    BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(deviceAddress);
+                                    if (bluetoothService.pairDevice(device))
+                                        Log.i(TAG, String.format("Successfully paired with device %s %s", deviceAddress, deviceName));
                                     return true;
                                 default:
                                     return false;
@@ -168,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
+        mBluetoothAdapter.getProfileProxy(this, mProfileListener, BluetoothProfile.HEADSET);
 
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
@@ -193,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         mBluetoothAdapter.cancelDiscovery();
-//        mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
+        mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
 
         // Don't forget to unregister the ACTION_FOUND receiver.
         unregisterReceiver(bluetoothService.getReceiver());
