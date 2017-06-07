@@ -16,7 +16,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Adapter;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -32,13 +35,11 @@ public class MainActivity extends AppCompatActivity {
     private final static String TAG = "SimpleBluetoothActivity";
     private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private ListView mListView;
-    private ArrayList<String> devices = new ArrayList<>();
-    private ArrayAdapter<String> devicesArrayAdapter;
-
+    private ArrayList<BluetoothDevice> mDevices = new ArrayList<>();
+    private ArrayAdapter<BluetoothDevice> mDevicesArrayAdapter;
     private SimpleBluetoothService bluetoothService;
 
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-            = new BottomNavigationView.OnNavigationItemSelectedListener() {
+    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -46,13 +47,13 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_paired_devices:
                     Log.i("NavigationItemListener", "paired_devices");
                     bluetoothService.cancelDiscovery();
-                    devicesArrayAdapter.clear();
-                    devicesArrayAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
-                    Log.i(TAG, String.format("pairedDevices: %s", devices));
+                    mDevicesArrayAdapter.clear();
+                    mDevicesArrayAdapter.addAll(bluetoothService.getPairedDevices());
+                    Log.i(TAG, String.format("pairedDevices: %s", mDevices));
                     return true;
                 case R.id.navigation_discover:
                     bluetoothService.cancelDiscovery();
-                    devicesArrayAdapter.clear();
+                    mDevicesArrayAdapter.clear();
                     bluetoothService.discover();
                     Log.i("NavigationItemListener", "discover");
                     return true;
@@ -62,6 +63,34 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
+    private class SimpleBluetoothArrayAdapter extends ArrayAdapter<BluetoothDevice> {
+//    private ArrayAdapter<BluetoothDevice> devicesArrayAdapter = new ArrayAdapter<BluetoothDevice>(this, R.layout.bluetooth_device, devices) {
+        public SimpleBluetoothArrayAdapter(Context context, ArrayList<BluetoothDevice> devices) {
+            super(context, 0, devices);
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            // Get the data item for this position
+            BluetoothDevice device = getItem(position);
+            // Check if an existing view is being reused, otherwise inflate the view
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(R.layout.bluetooth_device, parent, false);
+            }
+            // Lookup view for data population
+            TextView nameTextView = (TextView) convertView.findViewById(R.id.device_name);
+            TextView addressTextView = (TextView) convertView.findViewById(R.id.device_address);
+            // Populate the data into the template view using the data object
+            String deviceName = device.getName();
+            if (deviceName == null)
+                deviceName = "(no friendly name for this device)";
+            nameTextView.setText(deviceName);
+            addressTextView.setText(device.getAddress());
+            // Return the completed view to render on screen
+            return convertView;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,16 +98,13 @@ public class MainActivity extends AppCompatActivity {
 
         mListView = (ListView) findViewById(R.id.list);
         // Create adapter for ListView
-        devicesArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, devices);
-        mListView.setAdapter(devicesArrayAdapter);
+        mDevicesArrayAdapter = new SimpleBluetoothArrayAdapter(this, mDevices);
+        mListView.setAdapter(mDevicesArrayAdapter);
 
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
 
-         bluetoothService = new SimpleBluetoothService(
-                mBluetoothAdapter,
-                 devicesArrayAdapter
-        );
+         bluetoothService = new SimpleBluetoothService(mBluetoothAdapter, mDevicesArrayAdapter);
 
         // Set up Bluetooth
         if (mBluetoothAdapter == null) {
@@ -106,8 +132,8 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(bluetoothService.getReceiver(), filter);
 
         // Initially show paired devices
-        devicesArrayAdapter.clear();
-        devicesArrayAdapter.addAll(bluetoothService.getNamesOfPairedDevices());
+        mDevicesArrayAdapter.clear();
+        mDevicesArrayAdapter.addAll(bluetoothService.getPairedDevices());
     }
 
     @Override
@@ -122,9 +148,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void addPairedDevice(String deviceName) {
-        Log.i(TAG, String.format("Adding %s to pairedDevices", deviceName));
-        devicesArrayAdapter.add(deviceName);
+    private void addPairedDevice(BluetoothDevice device) {
+        Log.i(TAG, String.format("Adding device %s to pairedDevices", device.getAddress()));
+        mDevicesArrayAdapter.add(device);
     }
-
 }
