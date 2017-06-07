@@ -21,9 +21,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Adapter;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +68,6 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private class SimpleBluetoothArrayAdapter extends ArrayAdapter<BluetoothDevice> {
-//    private ArrayAdapter<BluetoothDevice> devicesArrayAdapter = new ArrayAdapter<BluetoothDevice>(this, R.layout.bluetooth_device, devices) {
         public SimpleBluetoothArrayAdapter(Context context, ArrayList<BluetoothDevice> devices) {
             super(context, 0, devices);
         }
@@ -81,11 +84,24 @@ public class MainActivity extends AppCompatActivity {
             TextView nameTextView = (TextView) convertView.findViewById(R.id.device_name);
             TextView addressTextView = (TextView) convertView.findViewById(R.id.device_address);
             // Populate the data into the template view using the data object
-            String deviceName = device.getName();
-            if (deviceName == null)
+            final String deviceName;
+            final String deviceAddress= device.getAddress();
+            if (device.getName() == null)
                 deviceName = "(no friendly name for this device)";
+            else
+                deviceName = device.getName();
             nameTextView.setText(deviceName);
-            addressTextView.setText(device.getAddress());
+            addressTextView.setText(deviceAddress);
+
+            // Show menu when tapped
+            ListView blueoothListView = mListView;
+            blueoothListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    Toast.makeText(view.getContext(), String.format("Device %s %s", deviceName, deviceAddress), Toast.LENGTH_SHORT)
+                        .show();
+                }
+            });
+
             // Return the completed view to render on screen
             return convertView;
         }
@@ -96,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mListView = (ListView) findViewById(R.id.list);
+        mListView = (ListView) findViewById(R.id.list_view);
         // Create adapter for ListView
         mDevicesArrayAdapter = new SimpleBluetoothArrayAdapter(this, mDevices);
         mListView.setAdapter(mDevicesArrayAdapter);
